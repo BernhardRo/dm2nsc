@@ -54,14 +54,22 @@ def convert_nightscout(entries, start_time=None):
 
 		author = NS_AUTHOR
 		created_at = time.format('YYYY-MM-DDTHH:mm:ssZ')
-
+		date = int(time.float_timestamp*1000)
+		reason = entry["bolus_insulin_type"]
+		if entry["bolus_insulin_type"]==1:
+			reason = "Humalog"
+		if entry["bolus_insulin_type"]==38:
+			reason = "Fiasp"
+		
+		bolus_insulin_type = reason
 		# You can do some custom processing here, if necessary. e.x.:
 		if entry["basal"]:
 			basal = entry["basal"]
-			duration_h = 24
-			duration_min = duration_h * 60
-			reason = "Lantus"
-			
+			reason = entry["basal_insulin_type"]
+			if entry["basal_insulin_type"]==6: #Lantus
+				duration_h = 24
+				duration_min = duration_h * 60
+				reason = "Lantus"
 			if entry["basal_insulin_type"]==6: #Abasaglar
 				duration_h = 22
 				duration_min = duration_h * 60
@@ -70,13 +78,19 @@ def convert_nightscout(entries, start_time=None):
 				duration_h = 28
 				duration_min = duration_h * 60
 				reason="Toujeo"
+			if entry["basal_insulin_type"]==21: #Tresiba
+				duration_h = 1.5*24
+				duration_min = duration_h * 60
+				reason="Tresiba"
 			notes = str(basal) + "U/" + str(duration_min) + "min, " + notes
 			if duration_h > 24:
 				duration_h = 24
 			basal_rate = float(basal)/duration_h
+			basal_insulin_type = reason
 			out.append({
 				"eventType": "Temp Basal",
 				"created_at": created_at,
+				"date": date,
 				"absolute": basal_rate,
 				#"basal" : basal_rate,
 				"notes": notes,
@@ -84,16 +98,19 @@ def convert_nightscout(entries, start_time=None):
 				"duration": duration_min,
 				"reason": reason,
 				"notes": notes,
-				"basal_insulin": basal
+				"basal_insulin": basal,
+				"basal_insulin_type": basal_insulin_type
 			})
 		
 		dat = {
 			"eventType": "Meal Bolus",
 			"created_at": created_at,
+			"date": date,
 			"carbs": entry["carbs"],
 			"insulin": bolus,
 			"notes": notes,
-			"enteredBy": author
+			"enteredBy": author,
+			"bolus_insulin_type":bolus_insulin_type
 		}
 		if entry["glucose"]:
 			glucose = entry["glucoseInCurrentUnit"] if entry["glucoseInCurrentUnit"] and entry["us_units"] else to_mgdl(entry["glucose"])
